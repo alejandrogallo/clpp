@@ -1,0 +1,64 @@
+#+title CLPP: A simple common-lisp based pre-processor
+#+author: Alejandro Gallo
+
+* Introduction
+
+** Goals
+
+This is the code base of a simple yet powerful
+preprocessor based in the common-lisp programming language.
+
+The goals of this project are:
+
+- simple :: the main code should be deployed in one single
+  file that is able to *run in any commonly used =CL= implementation*
+  without requiring any dependency.
+  This ensures that HPC clusters can use code using =CLPP=
+  as a preprocessor as long as they are able to compile a =CL=
+  interpreter such as =ECL=.
+- lisp-based :: the macros and the language should be common lisp,
+  and the macro writer should know common lisp, and only common lisp.
+  We refrain from developing yet another macro language.
+- configurable :: The behaviour of the preprocessor should be configurable
+  in a per-project way.
+- raw :: The project should not be opinionated in what respects to
+  how people should embed the code in their projects and/or
+  which syntax to use. It should however provide a growing list
+  of examples of how to employ it.
+- documentation :: The project should be well-documented and explained.
+  This document represents the implementation of the code,
+  and is therefore written in a literate programming style.
+
+#+begin_comment
+TODO: Think about putting this or not
+
+Some great projects targeting some of these points but not all
+are for instance
+
+- [[https://github.com/eudoxia0/cmacro][cmacro]] ::
+  The macro system is quite similar to rust syntax macros.
+  - However the user has to learn the syntax of the library which
+    feels quite limiting in comparison to =defmacro=.
+  - Depends on several libraries.
+  - Implements own parser.
+- [[https://github.com/kiselgra/c-mera][c-mera]] ::
+  Source-to-source translation engine.
+  - Opinionated about the choice of operators to use.
+  - It should be possible to use =c-mera= inside of =CLPP=.
+  - c-like languages based.
+#+end_comment
+
+** Philosophy
+
+- Use as much as possible from the common-lisp system,
+  this includes the code reader and the code formatter.
+- Give the user the tools to write syntax to document
+  for the users of the macros.
+  Provide tools and ideas, but rather than provide
+  support for any programming language or system,
+  which is hard to maintain and needs domain specific
+  knowledge, people should write small macros to do this
+  job. Therefore, most users are required to know their
+  way around common lisp.
+
+By default, 
