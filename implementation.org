@@ -111,6 +111,17 @@ Paul Graham's =symb= function
   (intern (format nil "~{~a~}" (mapcar #'symbol-name args))))
 #+end_src
 
+* Prolog
+:PROPERTIES:
+:header-args:lisp+: :noweb-ref prolog
+:END:
+
+#+begin_src lisp
+(defpackage :lpp
+  (:use :cl))
+(in-package :lpp)
+#+end_src
+
 * Variables
 :PROPERTIES:
 :header-args:lisp+: :noweb-ref variables
@@ -221,10 +232,90 @@ Paul Graham's =symb= function
 :PROPERTIES:
 :header-args:lisp+: :noweb-ref let-binders
 :END:
-* Reader macros
+* Prefixes
+:PROPERTIES:
+:header-args:lisp+: :noweb-ref prefixes
+:END:
+** Main handlers 
+#+begin_src lisp
+(defvar *prefix-alist*
+  '(("#:" . (lambda (is os prefix)
+              (format os "~&~a~%~a~%~a~&"
+                      (comment "start block")
+                      (read-form is prefix)
+                      (comment "end block"))))
+    ("#lisp:" . (lambda (is os prefix)
+                  (let ((*preserve-case* nil))
+                    (eval (read-form is prefix)))))
+    ("#c:" . (lambda (is os prefix)
+               (let ((form (read-form is prefix))
+                     (*preserve-case* t))
+                 (format os "~{~a~^~&~}"
+                         (mapcar #'symbol-name form)))))))
+
+
+(defmacro maybe-run-prefix (is os c)
+  `(cond
+     ,@(loop for pl in *prefix-alist*
+             collect
+             `((check-prefix ,is ,c ,(car pl))
+               (when ,os
+                 (funcall ,(cdr pl) ,is ,os ,(car pl)))))
+     (t (when o (princ c o)))))
+
+
+(defun check-prefix (s init prefix)
+  "Check and consume prefix if it matches.
+  If it does not match, it unreads whatever has been read."
+  (loop for ref in (coerce prefix 'list)
+        with read-chars = nil
+        with current = init
+        with i = 0
+        do (incf i)
+        if (char= ref current)
+          append (when (/= i (length prefix))
+                   (setf current (read-char s))
+                   (push current read-chars))
+        else
+          do (dolist (c read-chars)
+               (unread-char c s))
+          and return nil))
+
+
+(defun read-form (s prefix)
+  (if *preserve-case*
+    (let ((*readtable* (copy-readtable *readtable*)))
+      (setf (readtable-case *readtable*) :preserve)
+      (read s))
+    (read s)))
+#+end_src
+
+** Include
+
+#+begin_src lisp
+
+(defun include-stream (s &optional (o *standard-output*))
+  (let ((eof 'the-end))
+    (loop
+      with c = nil
+      do (setf c (read-char s nil eof))
+      if (eq c eof) return nil
+      else do (maybe-run-prefix s o c))))
+
+(defun include (filepath)
+  (with-open-file (s filepath)
+    (format t "~&~a" (comment (format nil "Included ~a" filepath)))
+    (include-stream s nil)))
+
+#+end_src
+
+
 * Script
 
-#+begin_src lisp :tangle clpp :shebang #!/usr/bin/env clisp :noweb yes :eval yes
+#+begin_src lisp :tangle clpp.lisp :noweb yes :eval yes
+;; vim:ft=lisp
+<<prolog>>
+
 <<utilities>>
 
 <<variables>>
@@ -232,5 +323,7 @@ Paul Graham's =symb= function
 <<macros>>
 
 <<let-binders>>
+
+<<prefixes>>
 
 #+end_src
