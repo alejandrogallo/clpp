@@ -1,4 +1,7 @@
-#+title CLPP: A simple common-lisp based pre-processor
+:PROPERTIES:
+:header-args:lisp: :results none
+:END:
+#+title: CLPP: A simple common-lisp based pre-processor
 #+author: Alejandro Gallo
 
 * Introduction
@@ -61,4 +64,132 @@ are for instance
   job. Therefore, most users are required to know their
   way around common lisp.
 
-By default, 
+CLPP works by translating s-expressions into strings,
+like any other source to source translation engine.
+The rules that CLPP uses, however, as especially simple
+so that one can have an easy mental map of what is coming
+out after the expansion.
+
+Any s-expression is converted to a string depending on
+their type, and there the only types
+pre-defined in =CLPP= are
+
+- function-macros
+- symbol-macros
+
+#+begin_todo
+Think about to give command like stuff
+or let the users do it
+#+end_todo
+
+* Utilities
+
+This an implementation of a dynamic =let= for =setf=-able constructs.
+#+begin_src lisp
+(defmacro letf (places &rest body)
+  (let ((result-v (gensym "RESULT"))
+        (old-v (gensym "OLD-BINDINGS")))
+    `(let ((,result-v)
+           (,old-v ',(loop for p in places
+                           collect `(,(car p)
+                                     ,(eval (car p))))))
+
+     ,@(loop for p in places
+           collect `(setf ,(car p) ,(cadr p)))
+     (setq ,result-v (progn ,@body))
+     (loop for p in ,old-v
+           do (eval `(setf ,(car p) ,(cadr p))))
+     ,result-v)))
+#+end_src
+
+Paul Graham's =symb= function
+#+begin_src lisp
+(defun symb (&rest args)
+  (intern (format nil "~{~a~}" (mapcar #'symbol-name args))))
+#+end_src
+
+* Variables
+
+#+begin_src lisp
+(defvar *preserve-case* t
+  "Preserve case of the symbols read.")
+
+(defvar *function-macros-alist* nil)
+(defvar *symbol-macros-alist* nil)
+#+end_src
+
+* Types
+** Macros
+
+#+begin_src lisp
+(defun car-is-atom-p (x)
+  (atom (car x)))
+(deftype car-is-atom ()
+  '(satisfies car-is-atom-p))
+
+(defun get-function-macro (name)
+  (getf *function-macros-alist* name))
+(defun function-macro-p (expr)
+  (get-function-macro (car expr)))
+(deftype function-macro ()
+  '(and list car-is-atom (satisfies function-macro-p)))
+
+(defun get-symbol-macro (name)
+  (getf *symbol-macros-alist* name))
+(defun symbol-macro-p (expr)
+  (get-symbol-macro expr))
+(deftype symbol-macro ()
+  '(and atom (satisfies symbol-macro-p)))
+
+(defun expand-macro (expr &key recursive)
+  (flet ((expander (e) (expand-macro e :recursive recursive)))
+    (etypecase expr
+      (function-macro (let* ((name (car expr))
+                        (args (mapcar #'expander (cdr expr)))
+                        (f (get-function-macro name))
+                        (new-expr (apply f args)))
+                        (if recursive (expander new-expr) new-expr)))
+      (symbol-macro (let* ((new-name (get-symbol-macro expr)))
+                      new-name))
+      (list (mapcar #'expander expr))
+      (t expr))))
+#+end_src
+
+
+** Dynamic binders
+
+#+begin_src lisp
+(defmacro function-macro-alist-pair (alist key args list-or-fun)
+  `(list '(getf ,alist ',key)
+         ,(etypecase list-or-fun
+            (function list-or-fun)
+            (list `(lambda ,args ,list-or-fun)))))
+
+(defmacro symbol-macro-alist-pair (alist key s)
+  `(list '(getf ,alist ',key) ',s))
+
+(defmacro letconstruct (recursive
+                        pair-constructor
+                        alist bindings
+                        &rest body)
+  (let ((letf-args (loop for b in bindings
+                         collect (eval `(,pair-constructor
+                                         ,alist
+                                         ,@b)))))
+    `(letf (,@letf-args)
+       (expand-macro (progn ,@body) :recursive ,recursive))))
+
+(defmacro clpp-macrolet (bindings &rest body)
+  `(letconstruct nil
+                 function-macro-alist-pair
+                 ,*function-macros-alist*
+                 ,bindings
+                 ,@body))
+
+(defmacro clpp-symbol-macrolet (bindings &rest body)
+  `(letconstruct nil
+                 symbol-macro-alist-pair
+                 ,*symbol-macros-alist*
+                 ,bindings
+                 ,@body))
+#+end_src
