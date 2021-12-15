@@ -240,10 +240,8 @@ Paul Graham's =symb= function
 #+begin_src lisp
 (defvar *prefix-alist*
   '(("#:" . (lambda (is os prefix)
-              (format os "~&~a~%~a~%~a~&"
-                      (comment "start block")
-                      (read-form is prefix)
-                      (comment "end block"))))
+              (format os "~&~%~a~%~&"
+                      (read-form is prefix))))
     ("#lisp:" . (lambda (is os prefix)
                   (let ((*preserve-case* nil))
                     (eval (read-form is prefix)))))
@@ -304,7 +302,6 @@ Paul Graham's =symb= function
 
 (defun include (filepath)
   (with-open-file (s filepath)
-    (format t "~&~a" (comment (format nil "Included ~a" filepath)))
     (include-stream s nil)))
 
 #+end_src
@@ -324,5 +321,43 @@ Paul Graham's =symb= function
 <<let-binders>>
 
 <<prefixes>>
+
+<<cli>>
+
+#+end_src
+
+* CLI
+:PROPERTIES:
+:header-args:lisp+: :noweb-ref cli
+:END:
+
+** ecl
+
+#+begin_src sh :noweb yes :tangle clpp :shebang "#!/usr/bin/env sh"
+
+: ${LISP:=sbcl}
+script=`mktemp`
+cat > $script <<'EOF'
+<<lisp-script>>
+
+(in-package :clpp)
+(include-stream *standard-input*)
+EOF
+
+if [[ $LISP == sbcl ]]; then
+  sbcl --script ${script}
+elif [[ $LISP == ecl ]]; then
+  ecl --shell ${script}
+elif [[ $LISP == clisp ]]; then
+  clisp ${script}
+elif [[ $LISP == ccl ]]; then
+  ccl -b -l ${script}
+elif [[ $LISP == gcl ]]; then
+  gcl -f ${script}
+else
+  echo "Error: NO LISP GIVEN"
+  exit 1
+fi
+
 
 #+end_src
