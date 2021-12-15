@@ -141,6 +141,20 @@ Paul Graham's =symb= function
 (deftype symbol-macro ()
   '(and atom (satisfies symbol-macro-p)))
 
+(defun string-prefix-p (prefix str)
+  (eq (string<= prefix str)
+      (length prefix)))
+
+(deftype prefixed-by (prefix)
+  (let ((name (gensym)))
+    (eval `(defun ,name (str) (string-prefix-p ,prefix (format nil "~a" str))))
+    `(satisfies ,name)))
+
+(deftype prefixed-command (prefix)
+  `(and list
+        car-is-atom
+        (satisfies prefixer-p)))
+
 (defun expand-macro (expr &key recursive)
   (flet ((expander (e) (expand-macro e :recursive recursive)))
     (etypecase expr
