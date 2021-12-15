@@ -1,5 +1,5 @@
 :PROPERTIES:
-:header-args:lisp: :results none
+:header-args:lisp: :results none :eval no
 :END:
 #+title: CLPP: A simple common-lisp based pre-processor
 #+author: Alejandro Gallo
@@ -83,6 +83,9 @@ or let the users do it
 #+end_todo
 
 * Utilities
+:PROPERTIES:
+:header-args:lisp+: :noweb-ref utilities
+:END:
 
 This an implementation of a dynamic =let= for =setf=-able constructs.
 #+begin_src lisp
@@ -109,6 +112,9 @@ Paul Graham's =symb= function
 #+end_src
 
 * Variables
+:PROPERTIES:
+:header-args:lisp+: :noweb-ref variables
+:END:
 
 #+begin_src lisp
 (defvar *preserve-case* t
@@ -120,6 +126,9 @@ Paul Graham's =symb= function
 
 * Types
 ** Macros
+:PROPERTIES:
+:header-args:lisp+: :noweb-ref macros
+:END:
 
 #+begin_src lisp
 (defun car-is-atom-p (x)
@@ -206,4 +215,22 @@ Paul Graham's =symb= function
                  ,*symbol-macros-alist*
                  ,bindings
                  ,@body))
+#+end_src
+
+
+:PROPERTIES:
+:header-args:lisp+: :noweb-ref let-binders
+:END:
+* Reader macros
+* Script
+
+#+begin_src lisp :tangle clpp :shebang #!/usr/bin/env clisp :noweb yes :eval yes
+<<utilities>>
+
+<<variables>>
+
+<<macros>>
+
+<<let-binders>>
+
 #+end_src
