@@ -240,16 +240,19 @@ Paul Graham's =symb= function
 #+begin_src lisp
 (defvar *prefix-alist*
   '(("#:" . (lambda (is os prefix)
-              (format os "~&~%~a~%~&"
+              (format os "~&~a~&"
                       (read-form is prefix))))
     ("#lisp:" . (lambda (is os prefix)
                   (let ((*preserve-case* nil))
                     (eval (read-form is prefix)))))
+    ("#render:" . (lambda (is os prefix)
+                    (in-package :clpp)
+                    (let ((*preserve-case* t))
+                      (render-raw os (eval (read-form is prefix))))))
     ("#c:" . (lambda (is os prefix)
                (let ((form (read-form is prefix))
                      (*preserve-case* t))
-                 (format os "~{~a~^~&~}"
-                         (mapcar #'symbol-name form)))))))
+                 (render-raw os form))))))
 
 
 (defmacro maybe-run-prefix (is os c)
@@ -306,6 +309,27 @@ Paul Graham's =symb= function
 
 #+end_src
 
+* Renderers
+:PROPERTIES:
+:header-args:lisp+: :noweb-ref renderers
+:END:
+** Raw renderer
+#+begin_src lisp
+
+(defun render-raw (s expr)
+  (etypecase expr
+    (function-macro (let* ((name (car expr))
+                           (f (get-function-macro name))
+                           (args (cadr expr))
+                           (new-expr (apply f f)))
+                      (render-raw s new-expr)))
+    (symbol-macro (render-raw s (get-symbol-macro expr)))
+    (string (format s "~s" expr))
+    (list (format s "~{~a~^ ~}" expr))
+    (atom (format s "~a" expr))))
+
+#+end_src
+
 * Library
 
 #+begin_src lisp :tangle clpp.lisp :noweb yes :eval yes :noweb-ref lisp-script
@@ -321,6 +345,8 @@ Paul Graham's =symb= function
 <<let-binders>>
 
 <<prefixes>>
+
+<<renderers>>
 
 <<cli>>
 
