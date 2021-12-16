@@ -333,9 +333,7 @@ Paul Graham's =symb= function
 
 ** ecl
 
-#+begin_src sh :noweb yes :tangle clpp :shebang "#!/usr/bin/env sh"
-
-: ${LISP:=sbcl}
+#+begin_src shell :noweb yes :tangle clpp :shebang "#!/usr/bin/env sh"
 script=`mktemp`
 cat > $script <<'EOF'
 <<lisp-script>>
@@ -344,15 +342,17 @@ cat > $script <<'EOF'
 (include-stream *standard-input*)
 EOF
 
-if [[ $LISP == sbcl ]]; then
+: ${LISP:=sbcl}
+
+if test $LISP = sbcl; then
   sbcl --script ${script}
-elif [[ $LISP == ecl ]]; then
+elif test $LISP = ecl; then
   ecl --shell ${script}
-elif [[ $LISP == clisp ]]; then
+elif test $LISP = clisp; then
   clisp ${script}
-elif [[ $LISP == ccl ]]; then
+elif test $LISP = ccl; then
   ccl -b -l ${script}
-elif [[ $LISP == gcl ]]; then
+elif test $LISP = gcl; then
   gcl -f ${script}
 else
   echo "Error: NO LISP GIVEN"
@@ -360,4 +360,17 @@ else
 fi
 
 
+#+end_src
+
+* Some examples
+
+#+begin_src c :eval no :tangle tests/test-1.c :mkdirp t
+#lisp:
+(defun say-hi ()
+  (print 'hi))
+
+#include<stdio.h>
+
+int main() {
+}
 #+end_src
